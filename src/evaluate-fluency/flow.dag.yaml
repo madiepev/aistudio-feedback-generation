@@ -1,0 +1,50 @@
+inputs:
+  question:
+    type: string
+    default: What feeds all the fixtures in low voltage tracks instead of each light having a line-to-low voltage transformer?
+    is_chat_input: false
+  answer:
+    type: string
+    default: The main transformer is the object that feeds all the fixtures in low voltage tracks.
+    is_chat_input: false
+outputs:
+  gpt_fluency:
+    type: object
+    reference: ${concat_scores.output.gpt_fluency}
+    evaluation_only: false
+    is_chat_output: false
+nodes:
+- name: fluency_score
+  type: llm
+  source:
+    type: code
+    path: fluency_score.jinja2
+  inputs:
+    question: "${inputs.question}"
+    answer: "${inputs.answer}"
+    max_tokens: "256"
+    deployment_name: "gpt-35-turbo"
+    temperature: "0.0"
+  api: chat
+  provider: AzureOpenAI
+  connection: ai-feedbackdevhub069292407505_aoai
+  module: promptflow.tools.aoai
+  aggregation: false
+- name: concat_scores
+  type: python
+  source:
+    type: code
+    path: concat_scores.py
+  inputs:
+    fluency_score: "${fluency_score.output}"
+  aggregation: false
+- name: aggregate_variants_results
+  type: python
+  source:
+    type: code
+    path: aggregate_variants_results.py
+  inputs:
+    results: "${concat_scores.output}"
+  aggregation: true
+environment:
+  python_requirements_txt: requirements.txt
